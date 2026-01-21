@@ -1,0 +1,8 @@
+Srivatsa2024Survey:
+  type: article
+  title: "A Survey of using Large Language Models for Generating Infrastructure as Code"
+  author: "Kalahasti Ganesh Srivatsa and Sabyasachi Mukhopadhyay and Ganesh Katrapati and Manish Shrivastava"
+  year: "2024"
+  eprint: "2404.00227"
+  archivePrefix: "arXiv"
+  primaryClass: "cs.SE"
