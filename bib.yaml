@@ -1,8 +1,24 @@
-Srivatsa2024Survey:
+
+
+Geirhos2020Shortcut:
   type: article
-  title: "A Survey of using Large Language Models for Generating Infrastructure as Code"
-  author: "Kalahasti Ganesh Srivatsa and Sabyasachi Mukhopadhyay and Ganesh Katrapati and Manish Shrivastava"
+  title: "Shortcut Learning in Deep Neural Networks"
+  author: "Robert Geirhos and Jörn-Henrik Jacobsen and Claudio Michaelis and Richard Zemel and Wieland Brendel and Matthias Bethge and Felix A. Wichmann"
+  year: "2020"
+  journal: "Nature Machine Intelligence"
+  volume: "2"
+  pages: "665-673"
+
+Ding2023Seeing:
+  type: article
+  title: "Seeing is not Believing: Robust Reinforcement Learning against Spurious Correlation"
+  author: "Wenhao Ding and Laixi Shi and Yuejie Chi and Ding Zhao"
+  year: "2023"
+  journal: "Advances in Neural Information Processing Systems"
+
+Ghanooni2024Spectral:
+  type: article
+  title: "Spectral Regularization for Self-Supervised Representation Learning"
+  author: "Naghmeh Ghanoni and Marius Kloft"
   year: "2024"
-  eprint: "2404.00227"
-  archivePrefix: "arXiv"
-  primaryClass: "cs.SE"
+  journal: "International Conference on Machine Learning"

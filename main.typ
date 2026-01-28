@@ -54,30 +54,33 @@
 #counter(page).update(1)
 
 = Introduction
-Reinforcement learning (RL) has achieved notable success in a variety of control and decision-making tasks. However, the generalization of learned policies remains a major challenge, particularly when training environments contain correlations that do not reflect the true structure of the task. Such spurious correlations can cause agents to rely on shortcuts that perform well during training but fail when the environment changes. This issue is especially relevant in realistic RL settings, where observations may be influenced by latent or unobserved factors.
+Reinforcement learning (RL) has shown strong results across a wide range of control and decision-making tasks. However, ensuring that learned policies generalize beyond their training environments remains a major challenge. In particular, when training environments contain correlations that do not reflect the true structure of the task, agents may learn to rely on shortcuts. These spurious correlations can lead to policies that perform well during training but fail once the environment changes. This issue is especially common in realistic RL settings, where observations are often influenced by latent or unobserved factors that introduce non-causal correlations between state components [1].
 
-Recent work in robust reinforcement learning has proposed explicit mechanisms to mitigate spurious correlations, often relying on state perturbations, counterfactual data generation, or causal modeling. While these approaches have shown promising results, they typically increase algorithmic complexity and require additional assumptions about the environment.
+To address this problem, recent work in robust reinforcement learning has proposed explicit mitigation strategies, often motivated by causal reasoning. A notable example is Seeing is not Believing, which models spurious correlations as the result of unobserved confounders and introduces robustness through state perturbations and counterfactual transition generation [2]. While such approaches have demonstrated promising empirical performance, they typically intervene at the level of the environment or training data and require additional modeling assumptions.
 
-At the same time, research in representation learning has shown that spurious correlations can manifest as imbalanced feature representations, where a small number of dominant directions capture most of the variance. Spectral regularization has been proposed as a way to counteract this effect by encouraging more balanced representations. This thesis explores whether such a representation-level approach can be applied to reinforcement learning, with a focus on empirical evaluation rather than strong theoretical claims.
+At the same time, research in representation learning suggests a complementary perspective. Studies in self-supervised learning have shown that spurious correlations can also appear in the structure of learned representations, where a small number of dominant directions capture most of the variance in high-dimensional feature spaces. Spectral regularization has been proposed as a way to counteract this effect by encouraging a more balanced eigenspectrum, leading to improved robustness and transfer performance [3]. Motivated by this representation-level view, this thesis investigates whether applying spectral regularization to the high-dimensional internal representations learned by Soft Actor-Critic can improve robustness to spurious correlations, without relying on explicit state-level interventions.
+
+
+
 
 == Background
-This section introduces the key concepts and methods that form the basis of this thesis. It provides background on spurious correlations in reinforcement learning, the Soft Actor-Critic algorithm, and spectral regularization in representation learning.
+This section introduces the core concepts that motivate and support this thesis. It covers the notion of spurious correlations in reinforcement learning, the Soft Actor-Critic algorithm used in this work, and spectral regularization methods from representation learning that inspire the proposed approach.
 
 === Spurious Correlations in Reinforcement Learning
-In reinforcement learning, spurious correlations arise when parts of the observed state are correlated due to latent factors rather than causal relationships. An agent may learn to exploit these correlations during training, leading to policies that are sensitive to distribution shifts. Such failures have been observed in tasks involving visual distractions, background changes, or correlated object configurations. Addressing spurious correlations is therefore an important aspect of improving robustness in RL.
-
+In reinforcement learning, spurious correlations occur when parts of the observed state are correlated due to latent or unobserved factors rather than causal relationships. Agents may exploit such correlations during training because they provide an easy path to reward maximization. However, when these correlations change at test time, the learned policies can fail. This issue has been studied in recent work that frames spurious correlations in RL through unobserved confounders and investigates robustness under distribution shifts #cite(<Ding2023Seeing>, supplement: none).
 === Soft Actor-Critic (SAC)
-Soft Actor-Critic is a widely used off-policy reinforcement learning algorithm for continuous control. It combines maximum-entropy reinforcement learning with actor–critic methods to achieve stable and sample-efficient learning. Due to its robustness and popularity, SAC serves as a suitable baseline for studying the effects of spurious correlations and representation-level regularization.
-
+Soft Actor-Critic (SAC) is an off-policy actor–critic algorithm for continuous control that combines reward maximization with an entropy-based exploration objective. Due to its stability and widespread use, SAC provides a suitable baseline for studying robustness and representation-level effects in reinforcement learning.
 === Spectral Regularization in Representation Learning
-Spectral regularization refers to techniques that control the distribution of variance in learned feature representations, often by penalizing dominance of a small number of feature directions. In self-supervised learning, such methods have been shown to improve robustness and transfer performance by encouraging more diverse representations. The potential relevance of these ideas to reinforcement learning has not yet been systematically explored.
+Spectral regularization methods aim to control how variance is distributed across learned feature dimensions. In self-supervised learning, such methods have been shown to reduce reliance on dominant feature directions and improve robustness by encouraging more balanced representations #cite(<Ghanooni2024Spectral>, supplement: none). Whether similar representation-level effects exist in reinforcement learning, where representations are learned implicitly, remains an open question.
 
 == Relevance
-Understanding and mitigating spurious correlations is critical for deploying reinforcement learning systems in real-world environments. This research is relevant to both the reinforcement learning and representation learning communities. The main contributions of this thesis are:
+Robustness to spurious correlations is essential for applying reinforcement learning in real-world settings. Existing approaches often intervene at the level of data or environment dynamics, which can increase complexity and require additional assumptions #cite(<Ding2023Seeing>, supplement: none).
 
-- *Simpler robustness mechanism:* The thesis investigates a representation-level alternative to explicit state perturbation or causal modeling.
-- *Empirical insight:* By analyzing spectral properties of RL representations, this work contributes to a better understanding of how spurious correlations affect policy learning.
-- *Bridging research areas:* The thesis connects ideas from self-supervised representation learning to robustness in reinforcement learning.
+This thesis explores a complementary direction by focusing on the structure of learned representations. Its relevance lies in:
+
+- *Simplicity:* The thesis investigates a representation-level alternative to explicit state perturbation or causal modeling.
+- *Insight:* By analyzing spectral properties of RL representations, this work contributes to a better understanding of how spurious correlations affect policy learning.
+- *Connection:* The thesis connects ideas from self-supervised representation learning to robustness in reinforcement learning.
 
 
 == Research Question
@@ -92,12 +95,7 @@ To address this question, the following sub-questions are investigated:
 - Q3: Does this lead to better performance under distribution shift?
 
 == Approach
-To address the research questions, this thesis will follow a design science research methodology. The approach will consist of the following phases:
 
-1.  *Literature Review:* A comprehensive review of the existing literature on honeynets, Infrastructure as Code, and the use of LLMs for code generation will be conducted.
-2.  *System Design and Implementation:* A system will be designed and implemented that takes high-level descriptions of honeynets as input and uses an LLM to generate IaC code (e.g., Terraform) as output.
-3.  *Evaluation:* The generated IaC code will be evaluated based on its functionality, plausibility from an attacker’s perspective, and maintainability. This will involve deploying the generated infrastructure and performing a series of tests.
-4.  *Analysis and Discussion:* The results of the evaluation will be analyzed, and the limitations of the approach will be discussed. The findings will be used to answer the research questions and provide recommendations for future research.
 
 == Methods
 // This research will employ a mixed-methods approach, combining design science with experimental evaluation. The following methods and tools will be used:
@@ -184,5 +182,4 @@ To address the research questions, this thesis will follow a design science rese
 
 Who is your supervisor? (#supervisor_name) Have you discussed your proposal with them? What do you still need to clear up?
 
-#cite(<Srivatsa2024Survey>, supplement: none)
 #bibliography("bib.yaml", title: "References")
