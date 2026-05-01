@@ -2,10 +2,10 @@
 #let author_name = "Zahra Khodabakhshian"
 #let author_email = "jov98mam@rptu.de"
 #let mtrk_nr = "426198"
-#let supervisor_name = "Naghmeh Ghanoni"
+#let supervisor_name = "Saurabh Varshneya"
 #let prof_name = "Prof. Dr. Marius Kloft"
 #let current_date = "November 2nd, 2025"
-#let thesis_title = "Robust Reinforcement Learning under Spurious Correlations"
+#let thesis_title = "Robust Reinforcement Learning against Spurious Correlations"
 
 // Set document properties
 #set document(title: thesis_title, author: author_name)
