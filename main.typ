@@ -2,94 +2,90 @@
 #let author_name = "Zahra Khodabakhshian"
 #let author_email = "jov98mam@rptu.de"
 #let mtrk_nr = "426198"
-#let supervisor_name = "Naghmeh ghanoni"
+#let supervisor_name = "Naghmeh Ghanoni"
 #let prof_name = "Prof. Dr. Marius Kloft"
 #let current_date = "November 2nd, 2025"
-#let thesis_title = "Representation-Level Spectral Regularization for Robust Reinforcement Learning"
+#let thesis_title = "Robust Reinforcement Learning under Spurious Correlations"
 
 // Set document properties
-#set document(
-  title: thesis_title,
-  author: author_name,
-)
+#set document(title: thesis_title, author: author_name)
 #set page(
   paper: "a4",
   margin: (left: 3cm, right: 3cm, top: 2.5cm, bottom: 2.5cm),
 )
-#set text(
-  lang: "en",
-  size: 12pt,
-)
-#set block(spacing: 1.5em)
+#set text(lang: "en", size: 11pt)
+#set block(spacing: 1.0em)
+#set par(justify: true)
 #set heading(numbering: "1.")
 
-// Title page
+// Title page header
 #align(center)[
   #text(10pt)[
-    #smallcaps("Master Thesis")\
-    Prüfer: #prof_name
+    #smallcaps("Master Thesis Proposal")\
+    Prüfer: #prof_name\
+    Supervisor: #supervisor_name
   ]
-  #v(2.0cm)
+  #v(1.2cm)
   #line(length: 100%)
-  #text(20pt, weight: "bold")[#upper(thesis_title)]
-  #line(length: 100%, stroke: 2pt)
-  #v(0.5cm)
+  #text(18pt, weight: "bold")[#upper(thesis_title)]
+  #line(length: 100%, stroke: 1.5pt)
+  #v(0.4cm)
   #current_date
-  #v(1fr)
+  #v(0.8cm)
   #author_name\
   Mtrk.nr.: #mtrk_nr\
   Rheinland-Pfälzische Technische Universität Kaiserslautern-Landau (RPTU)\
   #link("mailto:" + author_email)\
 ]
 
-#pagebreak()
-
-// Table of contents
-#outline()
-
-#pagebreak()
-#counter(page).update(1)
+#v(0.8cm)
 
 = Motivation
-Reinforcement learning (RL) has achieved strong empirical performance across a wide range of control and decision-making tasks. However, the generalization of learned policies beyond their training environments remains a significant challenge. In many practical settings, training environments contain correlations that are not causally related to the task objective. Agents may exploit such spurious correlations because they provide an easy path to reward maximization, even though they do not reflect the true structure of the problem. When these correlations change at test time, policies that rely on such shortcuts can fail.
 
-Recent work in robust reinforcement learning has highlighted this issue and proposed mitigation strategies based on explicit interventions, such as state perturbations or counterfactual transition generation #cite(<Ding2023Seeing>). While these approaches can improve robustness under distribution shifts, they intervene at the level of the environment or training data and rely on additional modeling assumptions, increasing algorithmic complexity and limiting applicability in some settings.
+Reinforcement learning (RL) agents can perform very well in the environment in which they are trained, but this performance does not always transfer to slightly different settings. One common reason is that the agent may learn a shortcut from the training data. In other words, it may rely on a feature that is correlated with success during training, although this feature is not actually needed for solving the task.
 
-At the same time, research in representation learning suggests that spurious correlations may also be reflected in the structure of learned representations. In high-dimensional neural feature spaces, variance can become concentrated in a small number of dominant directions associated with spurious but predictive features. Spectral regularization has been proposed to counteract this behavior by encouraging more balanced representations#cite(<Ghanooni2024Spectral>, supplement: none) . Motivated by this perspective, this thesis explores whether a representation-level intervention—applied to internal policy and value representations—can improve robustness in reinforcement learning without explicitly modifying the environment or training data.
+This problem is the main motivation for my thesis. In a robotic manipulation task, for example, the color of an object can be correlated with its position. The robot may then learn to use color as a cue, even though color is not what makes the lifting task succeed. If this relationship changes later, the learned policy may fail. The aim of this work is to study this kind of failure in a controlled RL setting and to investigate whether training with generated counterfactual transitions can make the policy less dependent on such misleading correlations.
 
+= Research Direction
 
+The project is inspired by recent work on robust reinforcement learning against spurious correlations, especially the RSC-MDP framework from _Seeing is not Believing_ @Ding2023Seeing. The paper studies cases where spurious correlations are caused by hidden confounders and proposes to generate additional transitions that break or weaken these correlations.
 
+For this thesis, I plan to work with the Robosuite Lift task. The environment can be modified so that cube position and cube color are correlated during training. Afterwards, the trained policy can be evaluated in settings where this relationship is changed, for example where color and position become independent or swapped. This gives a simple but useful test case: if the policy learned the actual manipulation behavior, it should still work under these shifts; if it learned the shortcut, performance should drop.
 
-= Related work
-Robust reinforcement learning has increasingly focused on spurious correlations. A prominent example is Seeing is not Believing, which models spurious correlations as arising from unobserved confounders and proposes robustness mechanisms based on state perturbations and counterfactual transition generation @Ding2023Seeing. While this approach demonstrates improved robustness under distribution shifts, it does not explicitly analyze or constrain the internal representations learned by policy and value networks.
+= Proposed Method
 
-In parallel, representation learning research—particularly in self-supervised learning—has shown that spurious correlations can dominate the eigenspectrum of learned representations, leading to reduced robustness and poor transfer performance. Spectral regularization addresses this issue by penalizing spectral concentration and encouraging a more uniform distribution of variance across feature dimensions.
+The baseline method will be Soft Actor-Critic (SAC), implemented in a CleanRL-style training pipeline. The first step will be to train SAC in the confounded Lift environment and evaluate how much it depends on the color-position correlation. This baseline is important because it shows whether the spurious feature is actually being used by the agent.
 
-Although both lines of work aim to mitigate spurious correlations, they operate at different levels. Robust RL methods modify data or environment dynamics, while spectral regularization targets representation geometry. How these perspectives interact in reinforcement learning remains largely unexplored.
+As a robustness direction, I will investigate an RSC-inspired method. The main idea is to train a transition model from real replay data. This model learns to predict the next state and reward from the current state and action. After that, the current state can be perturbed, and the transition model can be used to generate a synthetic next state and reward for this perturbed state. These generated transitions are then mixed with real replay transitions during SAC training.
 
-= Research Gap
-Robustness to spurious correlations is essential for applying reinforcement learning in real-world settings. Existing approaches often intervene at the level of data or environment dynamics, which can increase complexity and require additional assumptions #cite(<Ding2023Seeing>, supplement: none).
+In simplified form, the transition model first learns from real transitions,
 
-In parallel, representation learning research—particularly in self-supervised learning—has studied how spurious features affect learned representations. Recent work shows that spurious correlations can dominate the eigenspectrum of feature representations, leading to reduced robustness and poor transfer performance. Spectral regularization methods address this issue by penalizing spectral concentration and encouraging a more uniform distribution of variance across feature dimensions.
+$
+  (s_t, a_t) -> (s_(t+1), r_t),
+$
 
-Although both lines of work aim to mitigate spurious correlations, they operate at different levels. Robust RL methods focus on modifying data or environment dynamics, while spectral regularization focuses on representation geometry. The interaction between these perspectives in reinforcement learning settings has not yet been systematically studied.
+and is then queried on perturbed states,
 
-= Approach
-The proposed approach is empirical. Soft Actor-Critic (SAC) is used as the baseline reinforcement learning algorithm due to its stability and widespread use in continuous control tasks.
+$
+  (tilde(s)_t, a_t) -> (hat(s)_(t+1), hat(r)_t).
+$
 
-Spectral regularization is introduced as an additional loss term applied to internal representations of the policy and/or critic networks, following ideas from representation learning #cite(<Ghanooni2024Spectral>, supplement: none). Representations are extracted from selected hidden layers during training, and their spectral properties are analyzed using covariance-based measures such as eigenvalue decay and effective rank.
+The exact perturbation strategy is still part of the research. The initial version will use a general Eq. 7-style perturbation, where a state dimension is selected randomly from the observation vector. Since the designed spurious feature is related to object color, I may also compare this with a more targeted version where the RGB dimensions are perturbed together as one group. I do not want to fix this choice too early, because it is not yet clear whether general perturbations are sufficient or whether the method needs to intervene more directly on the known spurious feature.
 
-The method does not modify the environment, reward function, or training data. Instead, it constrains the geometry of learned representations during optimization.
-= Research Questions and Expected Outcomes
+The final method will therefore be chosen based on empirical behavior: training stability, success in the original environment, and robustness when the color-position relationship changes.
 
-This thesis addresses the following research question:
+= Research Questions
 
-Can spectral regularization of learned representations improve the robustness of Soft Actor-Critic policies in environments with spurious correlations?
+1. Does a SAC agent trained in the confounded Lift environment rely on the spurious color-position correlation?
 
-To answer this question, the thesis (i) analyzes whether SAC learns spectrally imbalanced representations under spurious correlations, (ii) studies how spectral regularization affects representation structure during training, and (iii) evaluates whether these changes reduce performance degradation under distribution shifts.
+2. Can RSC-style counterfactual transition generation improve robustness under shifted test environments?
 
-The expected outcomes are empirical and exploratory, aiming to clarify the potential and limitations of spectral regularization as a robustness mechanism in reinforcement learning.
+3. How important is the perturbation strategy, for example random perturbation compared with color-focused perturbation?
 
+= Expected Outcome
 
+The expected outcome is an empirical study of robust RL under a controlled spurious correlation. I expect to compare standard SAC with an RSC-inspired variant that uses generated transitions. The main evaluation will measure success rates in the original confounded environment and in shifted environments where the spurious relationship changes.
+
+The contribution of the thesis will be a clear experimental analysis rather than a claim that one method solves the full problem. If the robust method improves performance under shift, the thesis can show how counterfactual transition generation helps reduce shortcut learning. If the improvement is limited, the work can still be useful by showing where the method becomes unstable or where the perturbation design matters. In both cases, the goal is to better understand how RL agents behave when misleading correlations are present in the training environment.
 
 #bibliography("bib.yaml", title: "References")
