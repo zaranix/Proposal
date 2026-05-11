@@ -48,39 +48,93 @@ This problem is the main motivation for my thesis. In a robotic manipulation tas
 
 = Research Direction
 
-The project is inspired by recent work on robust reinforcement learning against spurious correlations, especially the RSC-MDP framework from _Seeing is not Believing_ @Ding2023Seeing. The paper studies cases where spurious correlations are caused by hidden confounders and proposes to generate additional transitions that break or weaken these correlations.
+The project is inspired by recent work on robust reinforcement learning against spurious correlations, especially the RSC-MDP framework from _Seeing is not Believing_ @Ding2023Seeing. The main idea is that some observed state features may be correlated because of an unobserved confounder. If the distribution of this hidden confounder changes, the correlation between observed features can also change. A policy that relies on the spurious feature may then fail, while a policy that relies on the real causal structure of the task should remain robust. The paper studies cases where spurious correlations are caused by hidden confounders and proposes to generate additional transitions that break or weaken these correlations.
 
-For this thesis, I plan to work with the Robosuite Lift task. The environment can be modified so that cube position and cube color are correlated during training. Afterwards, the trained policy can be evaluated in settings where this relationship is changed, for example where color and position become independent or swapped. This gives a simple but useful test case: if the policy learned the actual manipulation behavior, it should still work under these shifts; if it learned the shortcut, performance should drop.
+My implementation adapts this idea to robosuite Lift. I create a training environment where cube color and cube position are correlated, and then I evaluate the trained policy in shifted environments where this relationship is changed or removed. The goal is to test whether the RSC-SAC idea can reduce the policy's dependence on the spurious color feature and improve generalization under distribution shift.
 
 = Proposed Method
 
-The baseline method will be Soft Actor-Critic (SAC), implemented in a CleanRL-style training pipeline. The first step will be to train SAC in the confounded Lift environment and evaluate how much it depends on the color-position correlation. This baseline is important because it shows whether the spurious feature is actually being used by the agent.
+My implementation is an RSC-SAC system for the robosuite Lift task. The method starts by creating a modified Lift environment in which a designed spurious correlation is introduced between the cube position and the cube color. The cube RGB color is then appended to the original observation vector, so the agent can observe both the physical state of the robot/cube and the potentially spurious color feature.
 
-As a robustness direction, I will investigate an RSC-inspired method. The main idea is to train a transition model from real replay data. This model learns to predict the next state and reward from the current state and action. After that, the current state can be perturbed, and the transition model can be used to generate a synthetic next state and reward for this perturbed state. These generated transitions are then mixed with real replay transitions during SAC training.
+The agent is trained with Soft Actor-Critic (SAC), but during training the standard SAC replay-buffer update is modified using the RSC procedure from the paper. First, a batch of real transitions is sampled from the replay buffer. Then, a fraction β of the samples is selected for RSC intervention. For these selected samples, the current state is perturbed using Eq. 7. After perturbation, a D.1-style causal transition model predicts the corresponding next state and reward. Finally, part of the SAC batch is replaced with these synthetic transitions, and SAC is updated on the mixed real/synthetic batch.
 
-In simplified form, the transition model first learns from real transitions,
+The full training and evaluation flow is:
 
-$
-  (s_t, a_t) -> (s_(t+1), r_t),
-$
+1. Create the robosuite Lift environment.
+2. Add a designed spurious correlation between cube position and cube color.
+3. Append the cube RGB color to the observation vector.
+4. Collect real transitions using SAC and store them in the replay buffer.
+5. Sample a batch of real transitions from the replay buffer.
+6. Select β percent of the batch for RSC perturbation.
+7. Perturb the selected current states using Eq. 7.
+8. Train the D.1-style causal transition model on the selected samples.
+9. Use the transition model to predict synthetic next state and reward for the perturbed states.
+10. Replace the selected rows in the SAC batch with these synthetic transitions.
+11. Update SAC using the mixed real/synthetic batch.
+12. Evaluate the learned policy on different spurious test modes.
 
-and is then queried on perturbed states,
+==  Environment Design
 
-$
-  (tilde(s)_t, a_t) -> (hat(s)_(t+1), hat(r)_t).
-$
+The environment is based on robosuite Lift with a Panda robot. The original task is to lift a cube from the table. In the standard task, the agent should rely on physical information such as the cube position, gripper position, and robot state.
 
-The exact perturbation strategy is still part of the research. The initial version will use a general Eq. 7-style perturbation, where a state dimension is selected randomly from the observation vector. Since the designed spurious feature is related to object color, I may also compare this with a more targeted version where the RGB dimensions are perturbed together as one group. I do not want to fix this choice too early, because it is not yet clear whether general perturbations are sufficient or whether the method needs to intervene more directly on the known spurious feature.
+To study spurious correlation, I modify the environment so that cube color becomes correlated with cube position during training. For example, one cube position may usually correspond to green and the other to red. The RGB value of the cube is appended to the state observation. This means the agent can observe a feature that is useful during training but not necessarily causal for solving the task.
 
-The final method will therefore be chosen based on empirical behavior: training stability, success in the original environment, and robustness when the color-position relationship changes.
+The environment supports different spurious modes:
+
+- `confounded`: color and position are correlated. This is the nominal training setting.
+- `shifted_indep`: color and position are independent. This tests whether the policy still works when the shortcut is removed.
+- `shifted_swapped`: the color-position mapping is swapped. This tests whether the policy fails when the shortcut becomes misleading.
+
+==  Base RL Algorithm: SAC
+
+The base reinforcement learning algorithm is Soft Actor-Critic. SAC learns a stochastic actor policy and two critic networks using transitions sampled from a replay buffer. This provides the standard baseline.
+
+The RSC method is not a replacement for SAC. Instead, it modifies the data used during SAC updates. The policy still learns with the normal SAC actor-critic objective, but part of each training batch is replaced with RSC-generated synthetic transitions.
+
+==  Eq. 7 State Perturbation
+
+For selected samples in a batch, Eq. 7 is used to perturb the current state. The idea is to choose one state dimension and replace it with the value from another sample in the same batch. The partner sample is chosen so that it is very different in the selected dimension but similar in the remaining dimensions.
+
+Intuitively, this creates a counterfactual-like state. One feature is changed while the rest of the state remains close to the original sample. In the context of Lift, this can help break the relationship between cube color and cube position.
+
+
+==  Causal Transition Model
+
+After perturbing the current state, the original next state and reward may no longer match the modified state. Therefore, the method uses a learned transition model to predict the next state and reward for the perturbed state.
+
+The transition model follows the structure from Appendix D.1 of the paper. It treats each state and action dimension as a scalar variable. Each scalar is encoded with a shared encoder and a learnable position embedding. A learnable causal graph is then applied between current state/action variables and next-state/reward variables. Finally, a shared decoder predicts the next state and reward.
+
+
+==  Mixed Real/Synthetic SAC Update
+
+The final SAC update is performed on a mixed batch. Most samples remain real replay-buffer transitions. The selected RSC samples are replaced by synthetic transitions consisting of:
+
+- perturbed current state,
+- original action,
+- predicted next state,
+- predicted reward.
+
+This exposes the policy and critic to transitions where the spurious feature has been changed. The goal is to make the learned policy less dependent on cube color and more dependent on physical task-relevant information.
+
+
+=  Expected Effect
+
+The expected effect of the method is that the learned policy becomes less dependent on the cube-color shortcut and more dependent on task-relevant physical information, such as the cube position, gripper position, and robot state.
+
+A standard SAC policy may achieve high performance in the confounded training environment because the color-position shortcut is useful there. However, when the color-position relationship changes at test time, this shortcut can become unreliable or even misleading. In that case, the policy may fail because it has learned a spurious correlation instead of a robust lifting strategy.
+
+In contrast, the RSC-SAC approach is expected to improve robustness by training the agent on perturbed, counterfactual-like transitions. These transitions weaken the original spurious correlation and expose the policy to states where the shortcut is less reliable. Ideally, this encourages the policy to rely more on causal and task-relevant features rather than cube color alone.
 
 = Research Questions
 
-1. Does a SAC agent trained in the confounded Lift environment rely on the spurious color-position correlation?
+This thesis investigates the following research questions:
+
+1. Does a standard SAC agent trained in the confounded Lift environment rely on the spurious color-position correlation?
 
 2. Can RSC-style counterfactual transition generation improve robustness under shifted test environments?
 
-3. How important is the perturbation strategy, for example random perturbation compared with color-focused perturbation?
+3. How important is the perturbation strategy, especially when comparing paper-faithful random perturbation with color-focused perturbation?
+
 
 = Expected Outcome
 
