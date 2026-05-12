@@ -142,4 +142,27 @@ The expected outcome is an empirical study of robust RL under a controlled spuri
 
 The contribution of the thesis will be a clear experimental analysis rather than a claim that one method solves the full problem. If the robust method improves performance under shift, the thesis can show how counterfactual transition generation helps reduce shortcut learning. If the improvement is limited, the work can still be useful by showing where the method becomes unstable or where the perturbation design matters. In both cases, the goal is to better understand how RL agents behave when misleading correlations are present in the training environment.
 
+== Preliminary Results
+
+The following table shows preliminary results from two experiments comparing a baseline SAC agent (Exp 1) with an RSC-SAC agent using random perturbation (Exp 2):
+
+#table(
+  columns: 3,
+  [*Metric*], [*Exp 1 (Base)*], [*Exp 2 (Random)*],
+  [Task], [Lift], [Lift],
+  [Method], [RSC CleanRL], [RSC CleanRL],
+  [Seed], [0], [0],
+  [Train steps], [1000000], [1000000],
+  [Perturbation mode], [base], [random],
+  [Perturbation meaning], [Plain SAC batch; no RSC perturbation], [Eq.7 swaps randomly chosen state dimension],
+  [Task mode], [confounded], [confounded],
+  [Beta], [0.500], [0.500],
+  [*Confounded* (train)], [*1.000*], [*0.824*],
+  [*Shifted independent*], [*0.412*], [*0.647*],
+  [*Shifted swapped*], [*0.000*], [*0.312*],
+  [Elapsed hours], [11.310], [12.460],
+)
+
+*Note on Metrics:* The paper reports normalized rewards, while I report raw episodic returns. My raw return is the sum of shaped robosuite rewards over an episode. The paper divides each method's mean episode return by vanilla SAC's mean episode return in the nominal environment. Because I have not applied this normalization yet, my numbers show performance on my own reward scale and are mainly comparable within my experiments, not directly against the paper tables.
+
 #bibliography("bib.yaml", title: "References")
