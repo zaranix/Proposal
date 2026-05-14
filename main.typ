@@ -144,23 +144,23 @@ The contribution of the thesis will be a clear experimental analysis rather than
 
 == Preliminary Results
 
-The following table shows preliminary results from two experiments comparing a baseline SAC agent (Exp 1) with an RSC-SAC agent using random perturbation (Exp 2):
+The following tables show preliminary results from experiments comparing a baseline SAC agent (Base) with an RSC-SAC agent using random perturbation (Random):
+
+*Table 1: Testing reward on shifted environments. Bold font means the best reward.*
 
 #table(
   columns: 3,
-  [*Metric*], [*Exp 1 (Base)*], [*Exp 2 (Random)*],
-  [Task], [Lift], [Lift],
-  [Method], [RSC CleanRL], [RSC CleanRL],
-  [Seed], [0], [0],
-  [Train steps], [1000000], [1000000],
-  [Perturbation mode], [base], [random],
-  [Perturbation meaning], [Plain SAC batch; no RSC perturbation], [Eq.7 swaps randomly chosen state dimension],
-  [Task mode], [confounded], [confounded],
-  [Beta], [0.500], [0.500],
-  [*Confounded* (train)], [*1.000*], [*0.824*],
-  [*Shifted independent*], [*0.412*], [*0.647*],
-  [*Shifted swapped*], [*0.000*], [*0.312*],
-  [Elapsed hours], [11.310], [12.460],
+  [*Environment*], [*Base (SAC)*], [*Random (RSC-SAC)*],
+  [Shifted independent], [0.412], [*0.647*],
+  [Shifted swapped], [0.000], [*0.312*],
+)
+
+*Table 2: Testing reward on nominal environments.*
+
+#table(
+  columns: 3,
+  [*Environment*], [*Base (SAC)*], [*Random (RSC-SAC)*],
+  [Confounded (nominal)], [*1.000*], [0.824],
 )
 
 *Note on Metrics:* The paper reports normalized rewards, while I report raw episodic returns. My raw return is the sum of shaped robosuite rewards over an episode. The paper divides each method's mean episode return by vanilla SAC's mean episode return in the nominal environment. Because I have not applied this normalization yet, my numbers show performance on my own reward scale and are mainly comparable within my experiments, not directly against the paper tables.
