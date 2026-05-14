@@ -150,17 +150,17 @@ The following tables show preliminary results from experiments comparing a basel
 
 #table(
   columns: 3,
-  [*Environment*], [*Base (SAC)*], [*Random (RSC-SAC)*],
-  [Shifted independent], [0.412], [*0.647*],
-  [Shifted swapped], [0.000], [*0.312*],
+  [Environment], [Base (SAC)], [Random (RSC-SAC)],
+  [Shifted independent], [0.412], [0.647],
+  [Shifted swapped], [0.000], [0.312],
 )
 
 *Table 2: Testing reward on nominal environments.*
 
 #table(
   columns: 3,
-  [*Environment*], [*Base (SAC)*], [*Random (RSC-SAC)*],
-  [Confounded (nominal)], [*1.000*], [0.824],
+  [Environment], [Base (SAC)], [Random (RSC-SAC)],
+  [Confounded (nominal)], [1.000], [0.824],
 )
 
 *Note on Metrics:* The paper reports normalized rewards, while I report raw episodic returns. My raw return is the sum of shaped robosuite rewards over an episode. The paper divides each method's mean episode return by vanilla SAC's mean episode return in the nominal environment. Because I have not applied this normalization yet, my numbers show performance on my own reward scale and are mainly comparable within my experiments, not directly against the paper tables.
