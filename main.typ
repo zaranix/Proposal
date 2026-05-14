@@ -146,7 +146,7 @@ The contribution of the thesis will be a clear experimental analysis rather than
 
 The following tables show preliminary results from experiments comparing a baseline SAC agent (Base) with an RSC-SAC agent using random perturbation (Random):
 
-*Table 1: Testing reward on shifted environments. Bold font means the best reward.*
+*Table 1: Testing reward on shifted environments.*
 
 #table(
   columns: 3,
