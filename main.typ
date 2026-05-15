@@ -96,7 +96,7 @@ The RSC method is not a replacement for SAC. Instead, it modifies the data used 
 For selected samples in a batch, Eq. 7 is used to perturb the current state. The idea is to choose one state dimension and replace it with the value from another sample in the same batch. The partner sample is chosen so that it is very different in the selected dimension but similar in the remaining dimensions.
 
 $
-  s'_i <- s_k, quad k = "arg max"_i frac(||s_i - s_j||_2^2, sum_(i') ||s'_i - s''_i||_2^2), quad i in {1, dots, K}
+  k = "arg max"_{k in {1, dots, K}} frac(||s_t^i - s_k^i||^2, ||s_t^(−i) - s_k^(−i)||^2)
 $
 
 Intuitively, this creates a counterfactual-like state. One feature is changed while the rest of the state remains close to the original sample. In the context of Lift, this can help break the relationship between cube color and cube position.
@@ -150,7 +150,7 @@ The contribution of the thesis will be a clear experimental analysis rather than
 
 The following tables show preliminary results from experiments comparing a baseline SAC agent (Base) with an RSC-SAC agent using random perturbation (Random):
 
-*Table 1: Testing reward on shifted environments.*
+*Table 1: Testing reward on shifted environmentsthis.*
 
 #table(
   columns: 3,
