@@ -48,52 +48,59 @@ This problem is the main motivation for my thesis. In a robotic manipulation tas
 
 = Research Direction
 
-The project is inspired by recent work on robust reinforcement learning against spurious correlations, especially the RSC-MDP framework from _Seeing is not Believing_ @Ding2023Seeing. The main idea is that some observed state features may be correlated because of an unobserved confounder. If the distribution of this hidden confounder changes, the correlation between observed features can also change. A policy that relies on the spurious feature may then fail, while a policy that relies on the real causal structure of the task should remain robust. The paper studies cases where spurious correlations are caused by hidden confounders and proposes to generate additional transitions that break or weaken these correlations.
+This thesis follows the direction opened by the RSC-MDP framework from _Seeing is not Believing_ @Ding2023Seeing. I focus on the empirical question of how much a reinforcement learning policy depends on a shortcut when the training environment contains a controlled spurious correlation. Rather than treating robustness only as resistance to small random noise, I study a more structured shift: the relationship between two observed parts of the state changes between training and evaluation.
 
-My implementation adapts this idea to robosuite Lift. I create a training environment where cube color and cube position are correlated, and then I evaluate the trained policy in shifted environments where this relationship is changed or removed. The goal is to test whether the RSC-SAC idea can reduce the policy's dependence on the spurious color feature and improve generalization under distribution shift.
+The goal is to build a small but clear experimental setting where this behavior can be measured. The thesis therefore asks whether a policy trained in a confounded environment still performs well when the spurious relationship is removed or reversed, and whether a robustness-oriented training procedure can improve this behavior compared with standard SAC.
 
 = Proposed Method
 
-My implementation is an RSC-SAC system for the robosuite Lift task. The method starts by creating a modified Lift environment in which a designed spurious correlation is introduced between the cube position and the cube color. The cube RGB color is then appended to the original observation vector, so the agent can observe both the physical state of the robot/cube and the potentially spurious color feature.
+Building on this direction, my proposed method adapts the empirical RSC-SAC idea to my experimental setting. The central problem is that the variable creating the spurious correlation is not something the agent can directly observe or intervene on. Because of that, I do not try to manipulate the hidden confounder itself. Instead, I approximate what such a change could look like by modifying observed states from the replay buffer and using these modified samples during training.
 
-The agent is trained with Soft Actor-Critic (SAC), but during training the standard SAC replay-buffer update is modified using the RSC procedure from the paper. First, a batch of real transitions is sampled from the replay buffer. Then, a fraction β of the samples is selected for RSC intervention. For these selected samples, the current state is perturbed using Eq. 7. After perturbation, a D.1-style causal transition model predicts the corresponding next state and reward. Finally, part of the SAC batch is replaced with these synthetic transitions, and SAC is updated on the mixed real/synthetic batch.
+The method can be understood in four steps. First, the agent collects normal SAC experience in the environment. Second, during training, some states from a replay-buffer batch are perturbed using the rule from Eq. 7. The purpose of this perturbation is to change one meaningful part of the state while keeping the remaining state as close as possible to a real sample. Third, since the original next state and reward may no longer match the perturbed state, I use a learned transition model to predict a new next state and reward. This transition model includes a sparse learnable graph, which is intended to reduce unnecessary dependencies between state dimensions. Finally, SAC is updated on a mixed batch containing both real transitions and generated transitions.
 
-The full training and evaluation flow is:
+This means that SAC is still the base learning algorithm. The robust part comes from changing the data distribution seen during the SAC update. Ideally, the generated transitions reduce the agent's dependence on the training-time shortcut and encourage the policy to use features that remain useful when the spurious relationship changes.
 
-1. Create the robosuite Lift environment.
-2. Add a designed spurious correlation between cube position and cube color.
-3. Append the cube RGB color to the observation vector.
-4. Collect real transitions using SAC and store them in the replay buffer.
-5. Sample a batch of real transitions from the replay buffer.
-6. Select β percent of the batch for RSC perturbation.
-7. Perturb the selected current states using Eq. 7.
-8. Train the D.1-style causal transition model on the selected samples.
-9. Use the transition model to predict synthetic next state and reward for the perturbed states.
-10. Replace the selected rows in the SAC batch with these synthetic transitions.
-11. Update SAC using the mixed real/synthetic batch.
-12. Evaluate the learned policy on different spurious test modes.
+#block(inset: 8pt, stroke: 0.6pt + gray, radius: 2pt)[
+  *Training procedure: RSC-SAC style update*
 
-==  Environment Design
+  *Given:* policy $pi$, replay buffer $D$, transition model $P_theta$, graph parameter $phi$, modification ratio $beta$
 
-The environment is based on robosuite Lift with a Panda robot. The original task is to lift a cube from the table. In the standard task, the agent should rely on physical information such as the cube position, gripper position, and robot state.
+  *for each training step* $t$ *do*
 
-To study spurious correlation, I modify the environment so that cube color becomes correlated with cube position during training. For example, one cube position may usually correspond to green and the other to red. The RGB value of the cube is appended to the state observation. This means the agent can observe a feature that is useful during training but not necessarily causal for solving the task.
+  $quad a_t <- pi(dot | s_t)$
 
-The environment supports different spurious modes:
+  $quad$ execute $a_t$ and observe $(s_(t+1), r_t)$
 
-- `confounded`: color and position are correlated. This is the nominal training setting.
-- `shifted_indep`: color and position are independent. This tests whether the policy still works when the shortcut is removed.
-- `shifted_swapped`: the color-position mapping is swapped. This tests whether the policy fails when the shortcut becomes misleading.
+  $quad D <- D union {(s_t, a_t, s_(t+1), r_t)}$
 
-==  Base RL Algorithm: SAC
+  $quad$ sample a batch $B$ from $D$
 
-The base reinforcement learning algorithm is Soft Actor-Critic. SAC learns a stochastic actor policy and two critic networks using transitions sampled from a replay buffer. This provides the standard baseline.
+  $quad$ choose a subset $I subset B$ with size controlled by $beta$
 
-The RSC method is not a replacement for SAC. Instead, it modifies the data used during SAC updates. The policy still learns with the normal SAC actor-critic objective, but part of each training batch is replaced with RSC-generated synthetic transitions.
+  $quad$ perturb the selected states using Eq. 7:
 
-==  Eq. 7 State Perturbation
+  $quad quad tilde(s)_j <- "Perturb"(s_j), quad j in I$
 
-For selected samples in a batch, Eq. 7 is used to perturb the current state. The idea is to choose one state dimension and replace it with the value from another sample in the same batch. The partner sample is chosen so that it is very different in the selected dimension but similar in the remaining dimensions.
+  $quad$ predict new transition targets:
+
+  $quad quad (hat(s)'_j, hat(r)_j) <- P_theta(tilde(s)_j, a_j, G_phi)$
+
+  $quad$ replace selected rows by $(tilde(s)_j, a_j, hat(s)'_j, hat(r)_j)$
+
+  $quad$ train $P_theta$ and $G_phi$ with
+
+  $quad quad L = norm(s'_j - hat(s)'_j)_2^2 + norm(r_j - hat(r)_j)_2^2 + lambda norm(G_phi)_p$
+
+  $quad$ update the SAC actor and critics on the mixed batch
+
+  *end for*
+]
+
+In my implementation, this algorithm is applied to a controlled robosuite task. The task-specific construction of the spurious correlation is described in the next section.
+
+==  Perturbing Replay-Buffer States
+
+The first RSC-specific step is to generate a perturbed version of the current state. The perturbation rule uses one state dimension $i$ and replaces it by the same dimension from another sample $k$ in the batch. The chosen sample should be different in dimension $i$, but still close in the remaining dimensions:
 
 $
   s_t^i <- s_k^i, quad
@@ -101,35 +108,54 @@ $
   quad k in {1, dots, K}
 $
 
-Intuitively, this creates a counterfactual-like state. One feature is changed while the rest of the state remains close to the original sample. In the context of Lift, this can help break the relationship between cube color and cube position.
+In my words, this tries to create a useful counterfactual-like state: one part of the observation is changed, while the rest of the state is kept close to something that was actually seen in the replay buffer. This is the step that weakens the original spurious relationship before the transition model predicts the new next state and reward.
 
+==  Learning the Structural Transition Model
 
-==  Causal Transition Model
+After perturbing the current state, the original transition target is no longer fully reliable. The next state and reward in the replay buffer came from the original state, not from the perturbed one. For this reason, the method learns a transition model that can generate a new target for the modified state-action pair:
 
-After perturbing the current state, the original next state and reward may no longer match the modified state. Therefore, the method uses a learned transition model to predict the next state and reward for the perturbed state.
+$
+  (hat(s)_(t+1), hat(r)_t) <- P_theta(tilde(s)_t, a_t, G_phi)
+$
 
-The transition model follows the structure from Appendix D.1 of the paper. It treats each state and action dimension as a scalar variable. Each scalar is encoded with a shared encoder and a learnable position embedding. A learnable causal graph is then applied between current state/action variables and next-state/reward variables. Finally, a shared decoder predicts the next state and reward.
+The important idea from Section 4.2 is that this model is not just a standard black-box dynamics model. It also learns a sparse graph $G_phi$ between the input variables $(s_t, a_t)$ and the output variables $(s_(t+1), r_t)$. In my implementation, this graph is represented through differentiable binary-concrete edge samples. The sparsity term encourages the model to use only the dependencies that are useful for prediction, instead of freely connecting every input dimension to every output dimension.
 
+The architecture follows the model described in Appendix D.1. Each scalar state or action dimension is encoded with a shared encoder together with a learnable position embedding. The learned graph then mixes these encoded features, and a shared decoder predicts each dimension of the next state and the reward. I use the following schematic to summarize the model:
 
-==  Mixed Real/Synthetic SAC Update
+#figure(
+  image("Gemini_Generated_Image_ka1o4gka1o4gka1o.png", width: 95%),
+  caption: [Schematic of the structural transition model used to generate next-state and reward targets for perturbed states.],
+)
 
-The final SAC update is performed on a mixed batch. Most samples remain real replay-buffer transitions. The selected RSC samples are replaced by synthetic transitions consisting of:
+The model is trained with a prediction loss for the next state and reward, together with a graph sparsity penalty:
 
-- perturbed current state,
-- original action,
-- predicted next state,
-- predicted reward.
+$
+  L(theta, phi) =
+    norm(s_(t+1) - hat(s)_(t+1))_2^2
+    + norm(r_t - hat(r)_t)_2^2
+    + lambda norm(G_phi)_p
+$
 
-This exposes the policy and critic to transitions where the spurious feature has been changed. The goal is to make the learned policy less dependent on cube color and more dependent on physical task-relevant information.
+This generated transition is then inserted into the SAC batch. In this way, the policy and critic are trained not only on the original confounded data, but also on transitions where the spurious relationship has been weakened by perturbation.
 
+==  Environment Design
 
-=  Expected Effect
+The environment is based on robosuite Lift with a Panda robot. The observation wrapper appends the cube RGB values `[r, g, b]` to the flattened state so the spurious factor is visible to the agent and available to the perturbation mechanism.
 
-The expected effect of the method is that the learned policy becomes less dependent on the cube-color shortcut and more dependent on task-relevant physical information, such as the cube position, gripper position, and robot state.
+To study spurious correlation, I modify the reset distribution of the Lift environment. The wrapper samples a left or right cube position and a green or red cube color. In `confounded` mode these two variables are tied together: left corresponds to green, and right corresponds to red. In `shifted_swapped` mode the mapping is reversed, and in `shifted_indep` mode the color is sampled independently of the cube position.
 
-A standard SAC policy may achieve high performance in the confounded training environment because the color-position shortcut is useful there. However, when the color-position relationship changes at test time, this shortcut can become unreliable or even misleading. In that case, the policy may fail because it has learned a spurious correlation instead of a robust lifting strategy.
+In this implementation, $s_t$ denotes the flattened robosuite observation after appending these RGB values. The `random` perturbation mode follows Eq. 7 directly, while the `rgb`, `rgb_single`, and `mixed` modes are Lift-specific ablations that perturb the appended color feature more explicitly.
 
-In contrast, the RSC-SAC approach is expected to improve robustness by training the agent on perturbed, counterfactual-like transitions. These transitions weaken the original spurious correlation and expose the policy to states where the shortcut is less reliable. Ideally, this encourages the policy to rely more on causal and task-relevant features rather than cube color alone.
+The environment supports different spurious modes:
+
+- `confounded`: cube position and cube color are correlated. This is the nominal training setting.
+- `shifted_indep`: cube position and cube color are independent. This tests whether the policy still works when the shortcut is removed.
+- `shifted_swapped`: the color-position mapping is swapped. This tests whether the policy fails when the shortcut becomes misleading.
+
+==  Base RL Algorithm: SAC
+
+The base reinforcement learning algorithm is Soft Actor-Critic. The RSC method is not a replacement for SAC; it modifies the data used during SAC updates. The final SAC update is performed on a mixed batch where some transitions are replaced by synthetic ones consisting of perturbed current state, original action, predicted next state, and predicted reward. This exposes the policy and critic to transitions where the spurious feature has been changed.
+
 
 = Research Questions
 
@@ -152,7 +178,7 @@ The contribution of the thesis will be a clear experimental analysis rather than
 
 The following tables show preliminary results from experiments comparing a baseline SAC agent (Base) with an RSC-SAC agent using random perturbation (Random):
 
-*Table 1: Testing reward on shifted environmentsthis.*
+*Table 1: Testing reward on shifted environments.*
 
 #table(
   columns: 3,
