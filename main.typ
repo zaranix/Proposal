@@ -48,7 +48,7 @@ This problem is the main motivation for my thesis. In a robotic manipulation tas
 
 = Research Direction
 
-This thesis follows the direction opened by the RSC-MDP framework from _Seeing is not Believing_ @Ding2023Seeing. I focus on the empirical question of how much a reinforcement learning policy depends on a shortcut when the training environment contains a controlled spurious correlation. Rather than treating robustness only as resistance to small random noise, I study a more structured shift: the relationship between two observed parts of the state changes between training and evaluation.
+This thesis follows the direction opened by the RSC-MDP framework from _Seeing is not Believing_ @Ding2023Seeing. I focus on the empirical question of how much a reinforcement learning policy depends on a shortcut when the training environment contains a controlled spurious correlation. 
 
 The goal is to build a small but clear experimental setting where this behavior can be measured. The thesis therefore asks whether a policy trained in a confounded environment still performs well when the spurious relationship is removed or reversed, and whether a robustness-oriented training procedure can improve this behavior compared with standard SAC.
 
@@ -118,7 +118,7 @@ $
   (hat(s)_(t+1), hat(r)_t) <- P_theta(tilde(s)_t, a_t, G_phi)
 $
 
-The important idea from Section 4.2 is that this model is not just a standard black-box dynamics model. It also learns a sparse graph $G_phi$ between the input variables $(s_t, a_t)$ and the output variables $(s_(t+1), r_t)$. In my implementation, this graph is represented through differentiable binary-concrete edge samples. The sparsity term encourages the model to use only the dependencies that are useful for prediction, instead of freely connecting every input dimension to every output dimension.
+The important idea from the paper is that this model is not just a standard black-box dynamics model. It also learns a sparse graph $G_phi$ between the input variables $(s_t, a_t)$ and the output variables $(s_(t+1), r_t)$. In my implementation, this graph is represented through differentiable binary-concrete edge samples. The sparsity term encourages the model to use only the dependencies that are useful for prediction, instead of freely connecting every input dimension to every output dimension.
 
 The architecture follows the model described in Appendix D.1. Each scalar state or action dimension is encoded with a shared encoder together with a learnable position embedding. The learned graph then mixes these encoded features, and a shared decoder predicts each dimension of the next state and the reward. I use the following schematic to summarize the model:
 
@@ -138,19 +138,24 @@ $
 
 This generated transition is then inserted into the SAC batch. In this way, the policy and critic are trained not only on the original confounded data, but also on transitions where the spurious relationship has been weakened by perturbation.
 
-==  Environment Design
+== Environment and Confounding Design
 
-The environment is based on robosuite Lift with a Panda robot. The observation wrapper appends the cube RGB values `[r, g, b]` to the flattened state so the spurious factor is visible to the agent and available to the perturbation mechanism.
+The experimental environment is based on the robosuite `Lift` task with a Panda robot. The task is to lift a cube from the table. In the original task, cube color is not necessary for solving the manipulation problem: the robot can complete the task using the cube position, gripper state, and other physical state variables. I therefore use cube color as a controlled spurious feature.
 
-To study spurious correlation, I modify the reset distribution of the Lift environment. The wrapper samples a left or right cube position and a green or red cube color. In `confounded` mode these two variables are tied together: left corresponds to green, and right corresponds to red. In `shifted_swapped` mode the mapping is reversed, and in `shifted_indep` mode the color is sampled independently of the cube position.
+To create a shortcut-learning setting, I modify the reset distribution of the environment. At the beginning of each episode, the cube is placed either on the left or on the right side of the workspace, and its color is set to either green or red. During nominal training, these two variables are correlated: for example, left cubes are green and right cubes are red. This makes color predictive of position during training, although color itself is not causally required for lifting.
 
-In this implementation, $s_t$ denotes the flattened robosuite observation after appending these RGB values. The `random` perturbation mode follows Eq. 7 directly, while the `rgb`, `rgb_single`, and `mixed` modes are Lift-specific ablations that perturb the appended color feature more explicitly.
+The agent uses state-based observations rather than image observations. Since cube color would otherwise not be visible to the policy, I append the RGB value of the cube to the flattened robosuite state. The final observation therefore contains the original physical state plus three additional color dimensions `[r, g, b]`. The action space remains the standard 4-dimensional Panda control action.
 
-The environment supports different spurious modes:
+I define three main environment modes:
 
-- `confounded`: cube position and cube color are correlated. This is the nominal training setting.
-- `shifted_indep`: cube position and cube color are independent. This tests whether the policy still works when the shortcut is removed.
-- `shifted_swapped`: the color-position mapping is swapped. This tests whether the policy fails when the shortcut becomes misleading.
+#table(
+  columns: 2,
+  [`confounded`], [Training setting. Cube position and cube color are correlated, e.g. left-green and right-red.],
+  [`shifted_indep`], [Test setting. Cube position and cube color are sampled independently. This removes the shortcut.],
+  [`shifted_swapped`], [Test setting. The training mapping is reversed. This makes the shortcut actively misleading.],
+)
+
+The shifted environments are not meant to make the physical lifting task harder. Instead, they test whether the learned policy depends on the color-position shortcut. A robust policy should still lift the cube when the color no longer predicts the training position pattern. A shortcut-based policy is expected to perform well in `confounded` mode but degrade in the shifted modes.
 
 ==  Base RL Algorithm: SAC
 
