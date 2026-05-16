@@ -4,7 +4,7 @@
 #let mtrk_nr = "426198"
 #let supervisor_name = "Saurabh Varshneya"
 #let prof_name = "Prof. Dr. Marius Kloft"
-#let current_date = "November 2nd, 2025"
+#let current_date = "May 16th, 2026"
 #let thesis_title = "Robust Reinforcement Learning against Spurious Correlations"
 
 // Set document properties
@@ -42,7 +42,7 @@
 
 = Motivation
 
-Reinforcement learning (RL) agents can perform very well in the environment in which they are trained, but this performance does not always transfer to slightly different settings. One common reason is that the agent may learn a shortcut from the training data. In other words, it may rely on a feature that is correlated with success during training, although this feature is not actually needed for solving the task.
+Reinforcement learning (RL) agents can perform very well in the environment in which they are trained, but this performance does not always transfer to slightly different settings. One common reason is that the agent may learn a shortcut from the training data. In other words, it may rely on a feature that is correlated with success during training, although this feature is not actually needed for solving the task. Shortcut learning is a known problem in machine learning more generally @Geirhos2020Shortcut, and recent work has shown that similar failures can also appear in reinforcement learning under spurious correlations @Ding2023Seeing.
 
 This problem is the main motivation for my thesis. In a robotic manipulation task, for example, the color of an object can be correlated with its position. The robot may then learn to use color as a cue, even though color is not what makes the lifting task succeed. If this relationship changes later, the learned policy may fail. The aim of this work is to study this kind of failure in a controlled RL setting and to investigate whether training with generated counterfactual transitions can make the policy less dependent on such misleading correlations.
 
@@ -52,7 +52,13 @@ This thesis follows the direction opened by the RSC-MDP framework from _Seeing i
 
 The goal is to build a small but clear experimental setting where this behavior can be measured. The thesis therefore asks whether a policy trained in a confounded environment still performs well when the spurious relationship is removed or reversed, and whether a robustness-oriented training procedure can improve this behavior compared with standard SAC.
 
-= Proposed Method
+= Thesis Contribution
+
+The contribution of this thesis is an empirical testbed and analysis, not a new theoretical RL algorithm. The work contributes three concrete parts. First, I construct a controlled robosuite `Lift` environment in which the relationship between cube position and cube color can be changed between training and evaluation. This gives a small benchmark for testing shortcut learning under distribution shift. Second, I implement an RSC-SAC-style training pipeline for this setting, including Eq. 7 state perturbations, a structural transition model, and mixed real/synthetic SAC updates. Third, I evaluate whether this procedure improves robustness compared with standard SAC when the color-position shortcut is removed or reversed.
+
+This framing makes the thesis contribution mainly experimental: the aim is to show whether the RSC idea can be transferred to a robotic manipulation task with a controlled spurious feature, and to analyze when this transfer helps or fails.
+
+= Method: RSC-SAC Adaptation
 
 Building on this direction, my proposed method adapts the empirical RSC-SAC idea to my experimental setting. The central problem is that the variable creating the spurious correlation is not something the agent can directly observe or intervene on. Because of that, I do not try to manipulate the hidden confounder itself. Instead, I approximate what such a change could look like by modifying observed states from the replay buffer and using these modified samples during training.
 
@@ -177,7 +183,7 @@ The contribution of the thesis will be a clear experimental analysis rather than
 
 == Preliminary Results
 
-The following tables show preliminary results from experiments comparing a baseline SAC agent (Base) with an RSC-SAC agent using random perturbation (Random):
+The following tables show preliminary results from experiments comparing a baseline SAC agent (Base) with an RSC-SAC agent using random perturbation (Random). These numbers are still preliminary and currently based on a limited number of runs, but they already test the central phenomenon of the thesis: whether a policy that performs well in the confounded training environment fails when the spurious correlation changes.
 
 *Table 1: Testing reward on shifted environments.*
 
@@ -195,6 +201,8 @@ The following tables show preliminary results from experiments comparing a basel
   [Environment], [Base (SAC)], [Random (RSC-SAC)],
   [Confounded (nominal)], [1.000], [0.824],
 )
+
+The baseline SAC policy reaches perfect performance in the nominal confounded environment, but its performance drops strongly under shift, especially in the swapped setting. This suggests that the baseline policy does not only learn the physical lifting behavior, but also uses the training-time color-position relationship. The RSC-SAC variant has lower nominal performance, but it improves performance in both shifted settings. This supports the hypothesis that generated counterfactual transitions can reduce dependence on the spurious feature, although more seeds are needed before making a final claim.
 
 *Note on Metrics:* The paper reports normalized rewards, while I report raw episodic returns. My raw return is the sum of shaped robosuite rewards over an episode. The paper divides each method's mean episode return by vanilla SAC's mean episode return in the nominal environment. Because I have not applied this normalization yet, my numbers show performance on my own reward scale and are mainly comparable within my experiments, not directly against the paper tables.
 
