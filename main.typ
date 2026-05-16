@@ -157,10 +157,6 @@ I define three main environment modes:
 
 The shifted environments are not meant to make the physical lifting task harder. Instead, they test whether the learned policy depends on the color-position shortcut. A robust policy should still lift the cube when the color no longer predicts the training position pattern. A shortcut-based policy is expected to perform well in `confounded` mode but degrade in the shifted modes.
 
-==  Base RL Algorithm: SAC
-
-The base reinforcement learning algorithm is Soft Actor-Critic. The RSC method is not a replacement for SAC; it modifies the data used during SAC updates. The final SAC update is performed on a mixed batch where some transitions are replaced by synthetic ones consisting of perturbed current state, original action, predicted next state, and predicted reward. This exposes the policy and critic to transitions where the spurious feature has been changed.
-
 
 = Research Questions
 
