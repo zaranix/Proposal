@@ -42,7 +42,7 @@
 
 = Motivation
 
-Reinforcement learning (RL) agents can perform very well in the environment in which they are trained, but this performance does not always transfer to slightly different settings. One possible reason is shortcut learning: the agent may rely on an observed feature that is predictive during training but is not actually necessary for solving the task. This issue is also discussed under related terms such as Clever Hans behavior, spurious correlations, and confounding @Steinmann2024Navigating. The problem has been studied in machine learning more generally @Geirhos2020Shortcut, and recent work has shown that similar failures can also appear in reinforcement learning when the training environment contains spurious correlations @Ding2023Seeing.
+Reinforcement learning (RL) agents can perform very well in the environment in which they are trained, but this performance does not always transfer to slightly different settings. One possible reason is shortcut learning: the agent may rely on an observed feature that is predictive during training but is not actually necessary for solving the task. This issue is studied in machine learning under related terms such as Clever Hans behavior, spurious correlations, and confounding @Geirhos2020Shortcut @Steinmann2024Navigating, and recent work has shown that similar failures can also appear in reinforcement learning @Ding2023Seeing.
 
 This problem is the main motivation for my thesis. In a robotic manipulation task, for example, the color of an object can be correlated with its position. A policy may then use color as an easy cue, even though color is not what makes the lifting behavior succeed. If this relationship changes during evaluation, the learned policy may fail because it has learned a shortcut instead of a robust manipulation strategy. The aim of this work is to study this failure mode in a controlled RL setting and to test whether a robustness-oriented training procedure can make the policy less sensitive to such misleading correlations.
 
@@ -56,7 +56,7 @@ The goal is to build a small but clear simulation-based experimental setting whe
 
 Building on this direction, my proposed method adapts the empirical RSC-SAC idea to my experimental setting. The central problem is that the variable creating the spurious correlation is not something the agent can directly observe or intervene on. Because of that, I do not try to manipulate the hidden confounder itself. Instead, I approximate what such a change could look like by modifying observed states from the replay buffer and using these modified samples during training.
 
-The method can be understood in four steps. First, the agent collects normal SAC experience in the environment. Second, during training, some states from a replay-buffer batch are perturbed using the rule from Eq. 7 of @Ding2023Seeing. The purpose of this perturbation is to change one meaningful part of the state while keeping the remaining state as close as possible to a real sample. Third, since the original next state and reward may no longer match the perturbed state, I use a learned transition model to predict a new next state and reward. This transition model includes a sparse learnable graph, which is intended to reduce unnecessary dependencies between state dimensions. Finally, SAC is updated on a mixed batch containing both real transitions and generated transitions.
+The method can be understood in four steps. First, the agent collects normal SAC experience in the environment. Second, during training, some states from a replay-buffer batch are perturbed using the rule from Eq. 7 of @Ding2023Seeing. Third, a learned structural transition model predicts new next-state and reward targets for the perturbed state-action pairs. Finally, SAC is updated on a mixed batch containing both real transitions and generated transitions.
 
 This means that Soft Actor-Critic (SAC) @Haarnoja2018SAC is still the base learning algorithm. The robust part comes from changing the data distribution seen during the SAC update. Ideally, the generated transitions reduce the agent's dependence on the training-time shortcut and encourage the policy to use features that remain useful when the spurious relationship changes.
 
@@ -96,8 +96,6 @@ This means that Soft Actor-Critic (SAC) @Haarnoja2018SAC is still the base learn
   *end for*
 ]
 
-In my implementation, this algorithm is applied to a controlled robosuite task. The task-specific construction of the spurious correlation is described in the next section.
-
 ==  Perturbing Replay-Buffer States
 
 The first RSC-specific step is to generate a perturbed version of the current state. The perturbation rule uses one state dimension $i$ and replaces it by the same dimension from another sample $k$ in the batch. The chosen sample should be different in dimension $i$, but still close in the remaining dimensions:
@@ -108,7 +106,7 @@ $
   quad k in {1, dots, K}
 $
 
-In my words, this tries to create a useful counterfactual-like state: one part of the observation is changed, while the rest of the state is kept close to something that was actually seen in the replay buffer. This is the step that weakens the original spurious relationship before the transition model predicts the new next state and reward.
+In my words, this creates a counterfactual-like state: one part of the observation is changed, while the rest remains close to something that was actually seen in the replay buffer.
 
 ==  Learning the Structural Transition Model
 
@@ -155,7 +153,7 @@ I define three main environment modes:
   [`shifted_swapped`], [Test setting. The training mapping is reversed. This makes the shortcut actively misleading.],
 )
 
-The shifted environments are not meant to make the physical lifting task harder. Instead, they test whether the learned policy depends on the color-position shortcut. A robust policy should still lift the cube when the color no longer predicts the training position pattern. A shortcut-based policy is expected to perform well in `confounded` mode but degrade in the shifted modes.
+The shifted environments test whether the learned policy depends on the color-position shortcut rather than making the physical lifting task harder. A robust policy should still lift the cube when color no longer predicts the training position pattern.
 
 
 = Research Questions
@@ -168,12 +166,6 @@ This thesis investigates the following research questions:
 
 3. How important is the perturbation strategy, especially when comparing paper-faithful random perturbation with color-focused perturbation?
 
-
-= Expected Outcome
-
-The expected outcome is an empirical study of robust RL under a controlled spurious correlation. I expect to compare standard SAC with an RSC-inspired variant that uses generated transitions. The main evaluation will measure success rates in the original confounded environment and in shifted environments where the spurious relationship changes.
-
-The study will be interpreted as a clear experimental analysis rather than a claim that one method solves the full problem. If the robust method improves performance under shift, the thesis can show how counterfactual transition generation helps reduce shortcut learning. If the improvement is limited, the work can still be useful by showing where the method becomes unstable or where the perturbation design matters. In both cases, the goal is to better understand how RL agents behave when misleading correlations are present in the training environment.
 
 = Thesis Contribution
 
@@ -188,9 +180,9 @@ At this stage, the expected contributions are mainly empirical and implementatio
 
 The final contribution list will be refined as the remaining implementation phases are completed.
 
-== Preliminary Results
+= Preliminary Results
 
-The following tables show preliminary results from experiments comparing a baseline SAC agent (Base) with an RSC-SAC agent using random perturbation (Random). These numbers are still preliminary and currently based on a limited number of runs, but they already test the central phenomenon of the thesis: whether a policy that performs well in the confounded training environment fails when the spurious correlation changes.
+The following tables show preliminary results from experiments comparing a baseline SAC agent (Base) with an RSC-SAC agent using random perturbation (Random). 
 
 *Table 1: Testing reward on shifted environments.*
 
@@ -211,6 +203,5 @@ The following tables show preliminary results from experiments comparing a basel
 
 The baseline SAC policy reaches perfect performance in the nominal confounded environment, but its performance drops strongly under shift, especially in the swapped setting. This suggests that the baseline policy does not only learn the physical lifting behavior, but also uses the training-time color-position relationship. The RSC-SAC variant has lower nominal performance, but it improves performance in both shifted settings. This supports the hypothesis that generated counterfactual transitions can reduce dependence on the spurious feature, although more seeds are needed before making a final claim.
 
-*Note on Metrics:* The paper reports normalized rewards, while I report raw episodic returns. My raw return is the sum of shaped robosuite rewards over an episode. The paper divides each method's mean episode return by vanilla SAC's mean episode return in the nominal environment. Because I have not applied this normalization yet, my numbers show performance on my own reward scale and are mainly comparable within my experiments, not directly against the paper tables.
 
-#bibliography("bib.yaml", title: "References")
+#bibliography("refs.bib", title: "References", style: "ieee")
