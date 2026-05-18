@@ -169,16 +169,15 @@ This thesis investigates the following research questions:
 
 = Thesis Contribution
 
-At this stage, the expected contributions are mainly empirical and implementation-based. They include:
+This thesis makes the following contributions:
 
 - a controlled robosuite `Lift` setup for studying a color-position spurious correlation under distribution shift,
 - an RSC-SAC-style implementation with Eq. 7 state perturbations, a structural transition model, and mixed real/synthetic SAC updates,
+- *extend RSC-SAC by selecting perturbation candidates that are not only state-similar but also action-invariant, so the swapped state factors are more likely to capture spurious rather than causal features.*
 - a comparison between standard SAC and RSC-SAC variants under confounded and shifted evaluation modes,
 - an analysis of different perturbation choices, including paper-faithful random perturbation and color-focused perturbation,
 - an extension of the implementation to additional robosuite tasks to test whether the same idea transfers beyond the initial `Lift` setup,
 - ...
-
-The final contribution list will be refined as the remaining implementation phases are completed.
 
 = Preliminary Results
 
