@@ -10,11 +10,44 @@ Geirhos2020Shortcut:
   pages: "665-673"
 
 Ding2023Seeing:
-  type: article
+  type: conference
   title: "Seeing is not Believing: Robust Reinforcement Learning against Spurious Correlation"
   author: "Wenhao Ding and Laixi Shi and Yuejie Chi and Ding Zhao"
   year: "2023"
-  journal: "Advances in Neural Information Processing Systems"
+  conference: "Advances in Neural Information Processing Systems"
+  volume: "36"
+  url: "https://proceedings.neurips.cc/paper_files/paper/2023/hash/d0c3841867db2c516454845a450ca885-Abstract-Conference.html"
+
+Haarnoja2018SAC:
+  type: conference
+  title: "Soft Actor-Critic: Off-Policy Maximum Entropy Deep Reinforcement Learning with a Stochastic Actor"
+  author: "Tuomas Haarnoja and Aurick Zhou and Pieter Abbeel and Sergey Levine"
+  year: "2018"
+  conference: "Proceedings of the 35th International Conference on Machine Learning"
+  publisher: "PMLR"
+  volume: "80"
+  page-range: "1861-1870"
+  url: "https://proceedings.mlr.press/v80/haarnoja18b.html"
+
+Zhu2020Robosuite:
+  type: article
+  title: "robosuite: A Modular Simulation Framework and Benchmark for Robot Learning"
+  author: "Yuke Zhu and Josiah Wong and Ajay Mandlekar and Roberto Martín-Martín and Abhishek Joshi and Kevin Lin and Abhiram Maddukuri and Soroush Nasiriany and Yifeng Zhu"
+  year: "2020"
+  journal: "Computing Research Repository"
+  volume: "abs/2009.12293"
+  url: "https://arxiv.org/abs/2009.12293"
+
+Steinmann2024Navigating:
+  type: article
+  title: "Navigating Shortcuts, Spurious Correlations, and Confounders: From Origins via Detection to Mitigation"
+  author: "David Steinmann and Felix Divo and Maurice Kraus and Antonia Wüst and Lukas Struppek and Felix Friedrich and Kristian Kersting"
+  year: "2024"
+  journal: "Computing Research Repository"
+  volume: "abs/2412.05152"
+  page-range: "1-31"
+  doi: "10.48550/arXiv.2412.05152"
+  url: "https://arxiv.org/abs/2412.05152"
 
 Ghanooni2024Spectral:
   type: article
